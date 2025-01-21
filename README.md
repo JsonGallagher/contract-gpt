@@ -2,27 +2,23 @@
 
 A React application that analyzes real estate contracts using OpenAI's GPT-4. Upload a PDF contract and get key information extracted including property details, signatures, deadlines, and more.
 
-## Demo - v1
-
-![Demo 1](./screenshots/demo.gif)
-
 ## Setup
 
 1. Clone the repository
-1. Install dependencies:
+2. Install dependencies:
 
-```bash
-npm install
-cd server
-npm install
-```
+   ```bash
+   npm install
+   cd server
+   npm install
+   ```
 
-1. Create a `.env` file in the server directory:
+3. Create a `.env` file in the server directory:
 
-```bash
-PORT=3001
-OPENAI_API_KEY=your_openai_api_key_here
-```
+   ```bash
+   PORT=3001
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
 
 ## Running the Application
 
@@ -36,7 +32,7 @@ From the project root:
 npm start
 ```
 
-Frontend runs on <http://localhost:3000>
+Frontend runs on http://localhost:3000
 
 ### Backend Server
 
@@ -47,7 +43,7 @@ cd server
 node index.js
 ```
 
-Backend runs on <http://localhost:3001>
+Backend runs on http://localhost:3001
 
 ## Key Features
 
