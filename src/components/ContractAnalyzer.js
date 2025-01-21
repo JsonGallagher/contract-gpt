@@ -5,21 +5,7 @@ const ContractAnalyzer = () => {
   const [file, setFile] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null); // Add error state
-
-  const validateFile = (file) => {
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-
-    if (!file.type.includes("pdf")) {
-      throw new Error("Please upload a PDF file");
-    }
-
-    if (file.size > MAX_SIZE) {
-      throw new Error("File size must be less than 5MB");
-    }
-
-    return true;
-  };
+  const [error, setError] = useState(null);
 
   const handleFileUpload = async (event) => {
     try {
@@ -28,8 +14,9 @@ const ContractAnalyzer = () => {
 
       if (!file) return;
 
-      // Validate file before uploading
-      validateFile(file);
+      if (!file.type.includes("pdf")) {
+        throw new Error("Please upload a PDF file");
+      }
 
       setFile(file);
       setLoading(true);
@@ -55,6 +42,7 @@ const ContractAnalyzer = () => {
       console.error("Error processing contract:", err);
       setError(err.message);
       setAnalysis(null);
+    } finally {
       setLoading(false);
     }
   };
@@ -98,7 +86,6 @@ const ContractAnalyzer = () => {
             </label>
           </div>
 
-          {/* Error Display - Properly placed inside the upload section */}
           {error && (
             <div className="max-w-xl mx-auto mt-4">
               <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">
@@ -124,7 +111,89 @@ const ContractAnalyzer = () => {
         {/* Results Section */}
         {analysis && !loading && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            {/* Rest of your results section code remains the same */}
+            <h2 className="text-2xl font-semibold text-gray-900 mb-6 flex items-center">
+              <FileText className="mr-2 h-6 w-6 text-blue-500" />
+              Analysis Results
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Main Information */}
+              <div className="space-y-6">
+                <InfoField
+                  label="Property Address"
+                  value={analysis.propertyAddress}
+                />
+                <InfoField
+                  label="Contract Status"
+                  value={
+                    analysis.isFullySigned
+                      ? "Fully Signed"
+                      : "Pending Signatures"
+                  }
+                  alert={!analysis.isFullySigned}
+                />
+                <InfoField
+                  label="Buyer Names"
+                  value={analysis.buyerNames.join(", ")}
+                />
+                <InfoField
+                  label="Seller Names"
+                  value={analysis.sellerNames.join(", ")}
+                />
+                <InfoField
+                  label="Purchase Price"
+                  value={analysis.purchasePrice}
+                />
+              </div>
+
+              {/* Additional Information */}
+              <div className="space-y-6">
+                <InfoField
+                  label="Title Company"
+                  value={analysis.titleCompany}
+                />
+                <InfoField label="Loan Type" value={analysis.loanType} />
+                <InfoField
+                  label="Agent Names"
+                  value={analysis.agentNames.join(", ")}
+                />
+              </div>
+            </div>
+
+            {/* Deadlines Section */}
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">
+                Key Deadlines
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(analysis.deadlines).map(([key, value]) => (
+                  <DeadlineItem
+                    key={key}
+                    label={key
+                      .replace(/([A-Z])/g, " $1")
+                      .replace(/^./, (str) => str.toUpperCase())}
+                    date={value}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {!analysis.isFullySigned && (
+              <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                <div className="flex">
+                  <AlertCircle className="h-5 w-5 text-yellow-400" />
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-yellow-800">
+                      Action Required
+                    </h3>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      This contract appears to be missing signatures. Please
+                      check for counterproposals.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -150,7 +219,7 @@ const DeadlineItem = ({ label, date }) => (
     <label className="block text-sm font-medium text-gray-500 mb-1">
       {label}
     </label>
-    <div className="text-gray-900">{date}</div>
+    <div className="text-gray-900">{date || "Not specified"}</div>
   </div>
 );
 

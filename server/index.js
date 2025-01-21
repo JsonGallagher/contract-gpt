@@ -43,125 +43,235 @@ async function parsePDF(buffer) {
   }
 }
 
-// Helper function to extract relevant sections
+// Helper function to extract relevant sections with better context
 function extractRelevantSections(text) {
   const sections = {
-    propertyInfo: "",
-    parties: "",
-    dates: "",
-    financial: "",
+    identification: [],
+    propertyInfo: [],
+    parties: [],
+    dates: [],
+    financial: [],
+    purchase: [],
+    loan: [],
+    closing: [],
   };
 
-  const lines = text.split("\n");
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
   let currentSection = "";
+  let inSection = false;
 
   for (const line of lines) {
     const lowerLine = line.toLowerCase();
 
-    // Property address section
-    if (lowerLine.includes("property") || lowerLine.includes("address")) {
-      sections.propertyInfo += line + "\n";
-    }
-
-    // Parties section (buyers, sellers, agents)
-    if (
-      lowerLine.includes("buyer") ||
-      lowerLine.includes("seller") ||
-      lowerLine.includes("agent") ||
-      lowerLine.includes("broker")
+    // Track major sections
+    if (lowerLine.includes("1. agreement")) {
+      currentSection = "identification";
+      inSection = true;
+    } else if (lowerLine.includes("2. parties and property")) {
+      currentSection = "parties";
+      inSection = true;
+    } else if (lowerLine.includes("3. dates, deadlines")) {
+      currentSection = "dates";
+      inSection = true;
+    } else if (lowerLine.includes("4. purchase price")) {
+      currentSection = "purchase";
+      inSection = true;
+    } else if (
+      lowerLine.includes("loan") &&
+      lowerLine.includes("limitations")
     ) {
-      sections.parties += line + "\n";
+      currentSection = "loan";
+      inSection = true;
+    } else if (lowerLine.includes("12. closing")) {
+      currentSection = "closing";
+      inSection = true;
     }
 
-    // Dates section
-    if (
-      lowerLine.includes("date") ||
-      lowerLine.includes("deadline") ||
-      lowerLine.includes("termination") ||
-      lowerLine.includes("closing")
-    ) {
-      sections.dates += line + "\n";
+    // Look specifically for property address
+    if (lowerLine.includes("known as:")) {
+      const addressLine = line + "\n";
+      // Include the next few lines to ensure we get the full address
+      const nextIndex = lines.indexOf(line);
+      if (nextIndex >= 0 && nextIndex + 1 < lines.length) {
+        sections.propertyInfo.push(addressLine);
+        sections.propertyInfo.push(lines[nextIndex + 1]);
+      }
     }
 
-    // Financial section
+    // Store lines in appropriate sections
+    if (inSection) {
+      switch (currentSection) {
+        case "identification":
+          sections.identification.push(line);
+          break;
+        case "parties":
+          sections.propertyInfo.push(line);
+          sections.parties.push(line);
+          break;
+        case "dates":
+          sections.dates.push(line);
+          break;
+        case "purchase":
+          sections.purchase.push(line);
+          sections.financial.push(line);
+          break;
+        case "loan":
+          sections.loan.push(line);
+          break;
+        case "closing":
+          sections.closing.push(line);
+          break;
+      }
+    }
+
+    // Capture additional context
     if (
       lowerLine.includes("price") ||
-      lowerLine.includes("loan") ||
-      lowerLine.includes("mortgage") ||
-      lowerLine.includes("payment")
+      lowerLine.includes("payment") ||
+      lowerLine.includes("earnest money") ||
+      lowerLine.includes("loan amount")
     ) {
-      sections.financial += line + "\n";
+      sections.financial.push(line);
     }
   }
 
-  // Combine relevant sections with section headers
+  // Format the extracted sections for the AI
   return `
-PROPERTY INFORMATION:
-${sections.propertyInfo}
+PROPERTY AND PARTIES INFORMATION:
+${sections.propertyInfo.join("\n")}
 
-PARTIES:
-${sections.parties}
-
-DATES AND DEADLINES:
-${sections.dates}
+IDENTIFICATION:
+${sections.identification.join("\n")}
 
 FINANCIAL DETAILS:
-${sections.financial}
+${sections.financial.join("\n")}
+
+DATES AND DEADLINES:
+${sections.dates.join("\n")}
+
+LOAN INFORMATION:
+${sections.loan.join("\n")}
+
+CLOSING DETAILS:
+${sections.closing.join("\n")}
   `.trim();
 }
 
-// Helper function to analyze text with GPT-4
-async function analyzeContractWithGPT4(text) {
+// Helper function to analyze contract with AI
+async function analyzeContractWithAI(text) {
   try {
-    // Extract only relevant sections to reduce token count
     const relevantText = extractRelevantSections(text);
-    console.log("Processed text length:", relevantText.length);
+    console.log("Processing text length:", relevantText.length);
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You are a real estate contract analyzer. Extract key information from the given text. 
-                   Only include information that you find in the text - use null for missing fields.
-                   Return a JSON object with the following structure exactly:
-                   {
-                     "propertyAddress": string or null,
-                     "isFullySigned": boolean,
-                     "buyerNames": string[],
-                     "sellerNames": string[],
-                     "purchasePrice": string or null,
-                     "titleCompany": string or null,
-                     "loanType": string or null,
-                     "agentNames": string[],
-                     "deadlines": {
-                       "inspectionTermination": string or null,
-                       "inspectionObjection": string or null,
-                       "inspectionResolution": string or null,
-                       "appraisalDeadline": string or null,
-                       "appraisalObjection": string or null,
-                       "appraisalResolution": string or null,
-                       "loanTerms": string or null,
-                       "loanAvailability": string or null,
-                       "closingDate": string or null,
-                       "possessionDate": string or null
-                     }
-                   }`,
+          content: `You are a Colorado real estate contract analyzer. Your task is to extract information from the contract and return it as a JSON object. Do not include any markdown formatting, explanation text, or backticks in your response. Only return the raw JSON object.
+
+The propertyAddress MUST be extracted from section 2.4 of the contract. Look for the text that comes after "known as:" and before "together with". This is the complete property address.
+
+For example, in the contract text if you see:
+"2.4. Property. The Property is ... known as: 123 Main Street, City, CO 12345"
+Then the propertyAddress should be "123 Main Street, City, CO 12345"
+
+Additional extraction rules:
+- propertyAddress: Find this EXACTLY as written after "known as:" in section 2.4
+- Purchase Price: Extract from section 4.1, including the dollar sign
+- Loan Type: Look for checked boxes in section 4.5.3
+- Deadlines: All dates must be in YYYY-MM-DD format
+
+
+For each field, I'll tell you exactly where to look:
+
+1. Property Address: Find the complete property address in section 2.4 (look for "known as:" followed by the address)
+2. Buyer Names: Section 2.1 lists the buyers
+3. Seller Names: Section 2.3 lists the sellers
+4. Purchase Price: Section 4.1 shows the total purchase price
+5. Title Company: Look for title company name in sections about closing or earnest money
+6. Loan Type: Section 4.5.3 has checkboxes for Conventional, FHA, VA, etc.
+7. Agent Names: Find all broker/agent names at the end of the contract
+8. Deadlines: Section 3.1 lists all key dates - convert them to YYYY-MM-DD format
+
+Return a JSON object with exactly this structure, using precise data from the contract:
+{
+  "propertyAddress": "full address as string",
+  "isFullySigned": boolean,
+  "buyerNames": ["array of names"],
+  "sellerNames": ["array of names"],
+  "purchasePrice": "exact amount with dollar sign",
+  "titleCompany": "company name",
+  "loanType": "type checked in 4.5.3",
+  "agentNames": ["array of agent names"],
+  "deadlines": {
+    "inspectionTermination": "YYYY-MM-DD",
+    "inspectionObjection": "YYYY-MM-DD",
+    "inspectionResolution": "YYYY-MM-DD",
+    "appraisalDeadline": "YYYY-MM-DD",
+    "appraisalObjection": "YYYY-MM-DD",
+    "appraisalResolution": "YYYY-MM-DD",
+    "loanTerms": "YYYY-MM-DD",
+    "loanAvailability": "YYYY-MM-DD",
+    "closingDate": "YYYY-MM-DD",
+    "possessionDate": "YYYY-MM-DD"
+  }
+}`,
         },
         {
           role: "user",
-          content: relevantText,
+          content: `Extract the contract information according to the specified structure. Here's the contract text:
+
+${relevantText}`,
         },
       ],
       temperature: 0.1,
-      max_tokens: 1000,
+      max_tokens: 1500,
     });
 
-    // Parse the response
-    const analysisResult = JSON.parse(response.choices[0].message.content);
+    // Log the raw response first
+    console.log("Raw AI response:", response.choices[0].message.content);
+
+    // Clean the response text
+    let content = response.choices[0].message.content.trim();
+
+    // Remove any markdown code block indicators
+    if (content.startsWith("```json")) {
+      content = content.substring(7);
+    }
+    if (content.startsWith("```")) {
+      content = content.substring(3);
+    }
+    if (content.endsWith("```")) {
+      content = content.slice(0, -3);
+    }
+
+    // Remove any backticks
+    content = content.replace(/`/g, "");
+
+    // Trim again after cleaning
+    content = content.trim();
+
+    // Log the cleaned content
+    console.log("Cleaned content:", content);
+
+    // Try to parse the JSON
+    let analysisResult;
+    try {
+      analysisResult = JSON.parse(content);
+    } catch (parseError) {
+      console.error("JSON Parse Error. Content:", content);
+      console.error("Parse error:", parseError);
+      throw new Error("Failed to parse AI response as JSON");
+    }
+
     return analysisResult;
   } catch (error) {
-    console.error("Error analyzing with GPT-4:", error);
+    console.error("Error analyzing with AI:", error);
     throw new Error("Failed to analyze contract content");
   }
 }
@@ -177,8 +287,8 @@ app.post("/api/analyze", upload.single("contract"), async (req, res) => {
     const text = await parsePDF(req.file.buffer);
     console.log("Extracted text length:", text.length);
 
-    // Analyze with GPT-4
-    const analysis = await analyzeContractWithGPT4(text);
+    // Analyze with AI
+    const analysis = await analyzeContractWithAI(text);
 
     res.json(analysis);
   } catch (error) {
