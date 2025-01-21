@@ -4,7 +4,7 @@ A React application that analyzes real estate contracts using OpenAI's GPT-4. Up
 
 ## Demo - v1
 
-![Demo 1](./project_demos/demo.gif)
+![Demo 1](/project_demos/demo.gif)
 
 ## Setup
 
