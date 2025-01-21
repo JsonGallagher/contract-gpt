@@ -21,11 +21,9 @@ const ContractAnalyzer = () => {
       setFile(file);
       setLoading(true);
 
-      // Create form data for file upload
       const formData = new FormData();
       formData.append("contract", file);
 
-      // Send to backend
       const response = await fetch("http://localhost:3001/api/analyze", {
         method: "POST",
         body: formData,
@@ -46,6 +44,42 @@ const ContractAnalyzer = () => {
       setLoading(false);
     }
   };
+
+  // Group deadlines by type
+  const deadlineGroups = analysis
+    ? {
+        inspection: {
+          title: "Inspection Deadlines",
+          deadlines: {
+            "Inspection Termination": analysis.deadlines.inspectionTermination,
+            "Inspection Objection": analysis.deadlines.inspectionObjection,
+            "Inspection Resolution": analysis.deadlines.inspectionResolution,
+          },
+        },
+        appraisal: {
+          title: "Appraisal Deadlines",
+          deadlines: {
+            "Appraisal Deadline": analysis.deadlines.appraisalDeadline,
+            "Appraisal Objection": analysis.deadlines.appraisalObjection,
+            "Appraisal Resolution": analysis.deadlines.appraisalResolution,
+          },
+        },
+        loan: {
+          title: "Loan Deadlines",
+          deadlines: {
+            "Loan Terms": analysis.deadlines.loanTerms,
+            "Loan Availability": analysis.deadlines.loanAvailability,
+          },
+        },
+        closing: {
+          title: "Closing & Possession",
+          deadlines: {
+            "Closing Date": analysis.deadlines.closingDate,
+            "Possession Date": analysis.deadlines.possessionDate,
+          },
+        },
+      }
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -165,15 +199,18 @@ const ContractAnalyzer = () => {
               <h3 className="text-xl font-semibold text-gray-900 mb-6">
                 Key Deadlines
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(analysis.deadlines).map(([key, value]) => (
-                  <DeadlineItem
-                    key={key}
-                    label={key
-                      .replace(/([A-Z])/g, " $1")
-                      .replace(/^./, (str) => str.toUpperCase())}
-                    date={value}
-                  />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {Object.entries(deadlineGroups).map(([groupKey, group]) => (
+                  <div key={groupKey} className="space-y-4">
+                    <h4 className="font-medium text-gray-900 text-lg">
+                      {group.title}
+                    </h4>
+                    <div className="space-y-3">
+                      {Object.entries(group.deadlines).map(([label, date]) => (
+                        <DeadlineItem key={label} label={label} date={date} />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -214,12 +251,19 @@ const InfoField = ({ label, value, alert }) => (
   </div>
 );
 
+// Helper function to format dates
+const formatDate = (dateStr) => {
+  if (!dateStr) return "Not specified";
+  const [year, month, day] = dateStr.split("-");
+  return `${month}-${day}-${year}`;
+};
+
 const DeadlineItem = ({ label, date }) => (
-  <div className="bg-gray-50 p-4 rounded-lg">
-    <label className="block text-sm font-medium text-gray-500 mb-1">
+  <div className="bg-sky-50 p-4 rounded-lg border border-sky-100 shadow-sm">
+    <label className="block text-sm font-medium text-gray-600 mb-1">
       {label}
     </label>
-    <div className="text-gray-900">{date || "Not specified"}</div>
+    <div className="text-gray-900">{formatDate(date)}</div>
   </div>
 );
 
