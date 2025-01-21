@@ -2,15 +2,9 @@
 
 A React application that analyzes real estate contracts using OpenAI's GPT-4. Upload a PDF contract and get key information extracted including property details, signatures, deadlines, and more.
 
-## Demo Screenshots - v1
+## Demo - v1
 
-### Screenshot 1: Uploading a PDF
-
-![Demo 1](./screenshots/demo1.png)
-
-### Screenshot 2: Analysis Results
-
-![Demo 2](./screenshots/demo2.png)
+![Demo 1](./screenshots/demo.gif)
 
 ## Setup
 
