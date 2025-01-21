@@ -5,7 +5,7 @@ A React application that analyzes real estate contracts using OpenAI's GPT-4. Up
 ## Setup
 
 1. Clone the repository
-2. Install dependencies:
+1. Install dependencies:
 
 ```bash
 npm install
@@ -13,9 +13,9 @@ cd server
 npm install
 ```
 
-3. Create a `.env` file in the server directory:
+1. Create a `.env` file in the server directory:
 
-```
+```bash
 PORT=3001
 OPENAI_API_KEY=your_openai_api_key_here
 ```
@@ -32,7 +32,7 @@ From the project root:
 npm start
 ```
 
-Frontend runs on http://localhost:3000
+Frontend runs on <http://localhost:3000>
 
 ### Backend Server
 
@@ -43,7 +43,7 @@ cd server
 node index.js
 ```
 
-Backend runs on http://localhost:3001
+Backend runs on <http://localhost:3001>
 
 ## Key Features
 
@@ -65,16 +65,6 @@ Backend runs on http://localhost:3001
 - OpenAI GPT-4
 - Tailwind CSS
 - pdf-parse for PDF processing
-
-## Troubleshooting
-
-If you see the error `error:0308010C:digital envelope routines::unsupported`, add this to your package.json scripts:
-
-```json
-"scripts": {
-  "start": "NODE_OPTIONS='--openssl-legacy-provider' react-scripts start"
-}
-```
 
 ## Notes
 
