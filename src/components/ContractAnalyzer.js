@@ -12,43 +12,37 @@ const ContractAnalyzer = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold text-gray-900">
             Contract Analyzer
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="mt-4 text-xl text-gray-600">
             Upload a contract to extract key information
           </p>
         </div>
 
-        {/* Upload Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-          <div className="max-w-xl mx-auto">
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="file-upload"
-            />
-            <label
-              htmlFor="file-upload"
-              className="cursor-pointer flex flex-col items-center space-y-4 p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors"
-            >
-              <Upload className="h-12 w-12 text-gray-400" />
-              <div className="text-center">
-                <span className="text-gray-600">
-                  {file
-                    ? file.name
-                    : "Drop your contract here or click to upload"}
-                </span>
-                <p className="text-sm text-gray-500 mt-1">PDF files only</p>
-              </div>
-            </label>
-          </div>
+        {/* Upload Box */}
+        <div className="bg-white rounded-lg shadow-lg p-8 border-2 border-dashed border-gray-300 hover:border-blue-500 transition-colors">
+          <input
+            type="file"
+            accept=".pdf"
+            onChange={handleFileUpload}
+            className="hidden"
+            id="file-upload"
+          />
+          <label
+            htmlFor="file-upload"
+            className="cursor-pointer block text-center"
+          >
+            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <span className="block text-gray-800 text-lg mb-2">
+              {file ? file.name : "Drop your contract here or click to upload"}
+            </span>
+            <span className="text-sm text-gray-500">PDF files only</span>
+          </label>
         </div>
       </div>
     </div>
