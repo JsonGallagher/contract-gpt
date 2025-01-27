@@ -42,31 +42,6 @@ async function parsePDF(buffer) {
   }
 }
 
-// Helper function to format dates to YYYY-MM-DD
-function formatDateToISO(dateStr) {
-  if (!dateStr) return null;
-
-  // Handle MM/DD/YYYY format
-  if (dateStr.includes("/")) {
-    const [month, day, year] = dateStr.split("/");
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  }
-
-  // Handle YYYY-MM-DD format (already correct)
-  if (dateStr.includes("-")) {
-    return dateStr;
-  }
-
-  // Handle other formats (e.g., DD-MM-YYYY)
-  if (dateStr.includes("-") && dateStr.split("-")[2].length === 4) {
-    const [day, month, year] = dateStr.split("-");
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  }
-
-  // If the format is unrecognized, return null
-  return null;
-}
-
 // Helper function to extract relevant sections with better context
 function extractRelevantSections(text) {
   const sections = {
@@ -186,6 +161,31 @@ ${sections.loan.join("\n")}
 CLOSING DETAILS:
 ${sections.closing.join("\n")}
   `.trim();
+}
+
+// Helper function to format dates to YYYY-MM-DD
+function formatDateToISO(dateStr) {
+  if (!dateStr) return null;
+
+  // Handle MM/DD/YYYY format
+  if (dateStr.includes("/")) {
+    const [month, day, year] = dateStr.split("/");
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  // Handle YYYY-MM-DD format (already correct)
+  if (dateStr.includes("-")) {
+    return dateStr;
+  }
+
+  // Handle other formats (e.g., DD-MM-YYYY)
+  if (dateStr.includes("-") && dateStr.split("-")[2].length === 4) {
+    const [day, month, year] = dateStr.split("-");
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  // If the format is unrecognized, return null
+  return null;
 }
 
 // Helper function to analyze contract with AI
