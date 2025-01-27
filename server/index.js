@@ -2,7 +2,6 @@ const express = require("express");
 const multer = require("multer");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const path = require("path");
 const { OpenAI } = require("openai");
 const pdfParse = require("pdf-parse");
 
@@ -41,6 +40,31 @@ async function parsePDF(buffer) {
     console.error("Error parsing PDF:", error);
     throw new Error("Failed to parse PDF file");
   }
+}
+
+// Helper function to format dates to YYYY-MM-DD
+function formatDateToISO(dateStr) {
+  if (!dateStr) return null;
+
+  // Handle MM/DD/YYYY format
+  if (dateStr.includes("/")) {
+    const [month, day, year] = dateStr.split("/");
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  // Handle YYYY-MM-DD format (already correct)
+  if (dateStr.includes("-")) {
+    return dateStr;
+  }
+
+  // Handle other formats (e.g., DD-MM-YYYY)
+  if (dateStr.includes("-") && dateStr.split("-")[2].length === 4) {
+    const [day, month, year] = dateStr.split("-");
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  // If the format is unrecognized, return null
+  return null;
 }
 
 // Helper function to extract relevant sections with better context
@@ -125,6 +149,9 @@ function extractRelevantSections(text) {
         case "closing":
           sections.closing.push(line);
           break;
+        default:
+          console.warn(`Unknown section encountered: ${currentSection}`);
+          break;
       }
     }
 
@@ -186,7 +213,6 @@ Additional extraction rules:
 - Loan Type: Look for checked boxes in section 4.5.3
 - Deadlines: All dates must be in YYYY-MM-DD format
 
-
 For each field, I'll tell you exactly where to look:
 
 1. Property Address: Find the complete property address in section 2.4 (look for "known as:" followed by the address)
@@ -197,6 +223,18 @@ For each field, I'll tell you exactly where to look:
 6. Loan Type: Section 4.5.3 has checkboxes for Conventional, FHA, VA, etc.
 7. Agent Names: Find all broker/agent names at the end of the contract
 8. Deadlines: Section 3.1 lists all key dates - convert them to YYYY-MM-DD format
+
+IMPORTANT: For deadlines, ensure the following mappings:
+- Inspection Termination: Extract from "§ 10 Inspection Termination Deadline" (e.g., "1/31/2025" → "2025-01-31")
+- Inspection Objection: Extract from "§ 10 Inspection Objection Deadline" (e.g., "1/31/2025" → "2025-01-31")
+- Inspection Resolution: Extract from "§ 10 Inspection Resolution Deadline" (e.g., "2/3/2025" → "2025-02-03")
+- Appraisal Deadline: Extract from "§ 6 Appraisal Deadline" (e.g., "1/30/2025" → "2025-01-30")
+- Appraisal Objection: Extract from "§ 6 Appraisal Objection Deadline" (e.g., "1/31/2025" → "2025-01-31")
+- Appraisal Resolution: Extract from "§ 6 Appraisal Resolution Deadline" (e.g., "2/3/2025" → "2025-02-03")
+- Loan Terms: Extract from "§ 5 New Loan Terms Deadline" (e.g., "1/24/2025" → "2025-01-24")
+- Loan Availability: Extract from "§ 5 New Loan Availability Deadline" (e.g., "2/3/2025" → "2025-02-03")
+- Closing Date: Extract from "§ 12 Closing Date" (e.g., "2/11/2025" → "2025-02-11")
+- Possession Date: Extract from "§ 17 Possession Date" (e.g., "2/11/2025" → "2025-02-11")
 
 Return a JSON object with exactly this structure, using precise data from the contract:
 {
@@ -233,13 +271,8 @@ ${relevantText}`,
       max_tokens: 1500,
     });
 
-    // Log the raw response first
-    console.log("Raw AI response:", response.choices[0].message.content);
-
     // Clean the response text
     let content = response.choices[0].message.content.trim();
-
-    // Remove any markdown code block indicators
     if (content.startsWith("```json")) {
       content = content.substring(7);
     }
@@ -249,17 +282,9 @@ ${relevantText}`,
     if (content.endsWith("```")) {
       content = content.slice(0, -3);
     }
+    content = content.replace(/`/g, "").trim();
 
-    // Remove any backticks
-    content = content.replace(/`/g, "");
-
-    // Trim again after cleaning
-    content = content.trim();
-
-    // Log the cleaned content
-    console.log("Cleaned content:", content);
-
-    // Try to parse the JSON
+    // Parse the JSON
     let analysisResult;
     try {
       analysisResult = JSON.parse(content);
@@ -268,6 +293,40 @@ ${relevantText}`,
       console.error("Parse error:", parseError);
       throw new Error("Failed to parse AI response as JSON");
     }
+
+    // Format all dates in the analysis result
+    analysisResult.deadlines = {
+      inspectionTermination: formatDateToISO(
+        analysisResult.deadlines.inspectionTermination
+      ),
+      inspectionObjection: formatDateToISO(
+        analysisResult.deadlines.inspectionObjection
+      ),
+      inspectionResolution: formatDateToISO(
+        analysisResult.deadlines.inspectionResolution
+      ),
+      appraisalDeadline: formatDateToISO(
+        analysisResult.deadlines.appraisalDeadline
+      ),
+      appraisalObjection: formatDateToISO(
+        analysisResult.deadlines.appraisalObjection
+      ),
+      appraisalResolution: formatDateToISO(
+        analysisResult.deadlines.appraisalResolution
+      ),
+      loanTerms: formatDateToISO(analysisResult.deadlines.loanTerms),
+      loanAvailability: formatDateToISO(
+        analysisResult.deadlines.loanAvailability
+      ),
+      closingDate: formatDateToISO(analysisResult.deadlines.closingDate),
+      possessionDate: formatDateToISO(analysisResult.deadlines.possessionDate),
+    };
+
+    // Log the extracted analysis result
+    console.log(
+      "Extracted Analysis Result:",
+      JSON.stringify(analysisResult, null, 2)
+    );
 
     return analysisResult;
   } catch (error) {

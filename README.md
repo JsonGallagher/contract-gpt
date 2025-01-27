@@ -66,7 +66,7 @@ Backend runs on http://localhost:3001
 
 - React
 - Node.js/Express
-- OpenAI GPT-4
+- OpenAI GPT-4o-mini
 - Tailwind CSS
 - pdf-parse for PDF processing
 
